@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PetGo Email</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>🐾 PetGo</h1>
+  <button id="themeToggle">🌙</button>
+</header>
+
+<div id="map"></div>
+
+<div class="action-bar">
+  <button id="btnReport">➕ Reportar</button>
+  <button id="btnHistory">📜 Histórico</button>
+  <button id="btnHeat">🔥 Heatmap</button>
+  <span id="score">🏆 0 pts</span>
+</div>
+
+<div id="modal" class="modal hidden">
+  <div class="modal-card">
+    <div class="modal-head">
+      <h2>Registrar Animal</h2>
+      <button id="btnClose">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="preview-container">
+        <video id="video" autoplay playsinline></video>
+        <img id="imgPreview" style="display:none;">
+      </div>
+      <label>Tipo:
+        <select id="tipoAnimal">
+          <option value="cachorro">🐶 Cachorro</option>
+          <option value="gato">🐱 Gato</option>
+          <option value="outro">🐾 Outro</option>
+        </select>
+      </label>
+      <label>Condição:
+        <select id="statusAnimal">
+          <option value="Saudável">✅ Saudável</option>
+          <option value="Ferido">💔 Ferido</option>
+          <option value="Faminto">🍖 Faminto</option>
+        </select>
+      </label>
+    </div>
+    <div class="modal-actions">
+      <button id="btnToggleCam">🔄 Trocar</button>
+      <button id="btnSnap" class="primary">📸 Tirar</button>
+      <button id="btnSend" class="success">✅ Enviar</button>
+    </div>
+  </div>
+</div>
+
+<aside id="sidebar" class="sidebar hidden">
+  <div class="sidebar-head">
+    <h2>Histórico</h2>
+    <button id="btnCloseHistory">✕</button>
+  </div>
+  <div class="sidebar-body">
+    <input type="text" id="searchHistory" placeholder="Filtrar por tipo/status">
+    <ul id="historyList"></ul>
+    <button id="btnExport" class="success">💾 Exportar JSON</button>
+  </div>
+</aside>
+
+<div id="toast" class="toast"></div>
+
+<!-- EmailJS -->
+<script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
+<script>
+  (function(){ emailjs.init("SEU_USER_ID_EMAILJS"); })();
+</script>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
+<script src="script.js"></script>
+</body>
+</html>
