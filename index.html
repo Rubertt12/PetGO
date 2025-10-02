@@ -16,13 +16,13 @@
 <div id="map"></div>
 
 <div class="action-bar">
-  <button id="btnReport">➕ Reportar</button>
+  <button id="btnReport" class="primary">➕ Reportar</button>
   <button id="btnHistory">📜 Histórico</button>
   <button id="btnHeat">🔥 Heatmap</button>
   <span id="score">🏆 0 pts</span>
 </div>
 
-<div id="modal" class="modal hidden">
+<div id="modal" class="modal">
   <div class="modal-card">
     <div class="modal-head">
       <h2>Registrar Animal</h2>
@@ -56,7 +56,7 @@
   </div>
 </div>
 
-<aside id="sidebar" class="sidebar hidden">
+<aside id="sidebar" class="sidebar">
   <div class="sidebar-head">
     <h2>Histórico</h2>
     <button id="btnCloseHistory">✕</button>
@@ -70,7 +70,6 @@
 
 <div id="toast" class="toast"></div>
 
-<!-- EmailJS -->
 <script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
 <script>
   (function(){ emailjs.init("SEU_USER_ID_EMAILJS"); })();
@@ -78,6 +77,9 @@
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.0.0/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
+
 <script src="script.js"></script>
 </body>
 </html>

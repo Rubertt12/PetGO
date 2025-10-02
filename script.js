@@ -1,8 +1,6 @@
 // ------------------ Inicializa mapa ------------------
 let map = L.map('map').setView([-30.0346, -51.2177], 15);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap'
-}).addTo(map);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map);
 let markers = L.layerGroup().addTo(map);
 
 // ------------------ Storage ------------------
@@ -34,12 +32,8 @@ const themeToggle = document.getElementById('themeToggle');
 
 let stream = null, facing = 'environment', photo = null, heatLayer = null;
 
-// ------------------ FUNÇÕES ------------------
-function showToast(msg){
-    toast.textContent = msg;
-    toast.classList.add('show');
-    setTimeout(()=>toast.classList.remove('show'),2000);
-}
+// ------------------ Funções ------------------
+function showToast(msg){ toast.textContent = msg; toast.classList.add('show'); setTimeout(()=>toast.classList.remove('show'),2000); }
 
 async function startCamera(){
     if(stream) stream.getTracks().forEach(t=>t.stop());
@@ -49,60 +43,65 @@ async function startCamera(){
         video.style.display = '';
         imgPreview.style.display = 'none';
         photo = null;
-    } catch(e){
-        showToast('Erro ao acessar câmera');
-        console.error(e);
-    }
+    } catch(e){ showToast('Erro ao acessar câmera'); console.error(e); }
 }
 
+// ------------------ Verificação de animal com COCO-SSD ------------------
+let model = null;
+async function loadModel(){ model = await cocoSsd.load(); }
+loadModel();
+
+async function detectAnimal(imgData){
+    if(!model) return false;
+    const predictions = await model.detect(imgData);
+    return predictions.some(p => p.class==='cat' || p.class==='dog');
+}
+
+// ------------------ Marcador + zona ------------------
 function addMarker(r){
     let iconUrl = r.tipo==='cachorro'?'https://cdn-icons-png.flaticon.com/512/194/194279.png':
                   r.tipo==='gato'?'https://cdn-icons-png.flaticon.com/512/194/194931.png':
                   'https://cdn-icons-png.flaticon.com/512/616/616408.png';
     let icon = L.icon({ iconUrl, iconSize:[40,40], iconAnchor:[20,40] });
-    L.marker([r.lat, r.lng], { icon })
+
+    // Marcador
+    L.marker([r.lat,r.lng], { icon })
      .addTo(markers)
      .bindPopup(`<b>${r.tipo}</b><br>${r.status}<br>${r.endereco}<br><a href="${r.map_link}" target="_blank">Abrir no Google Maps</a><br><img src="${r.foto}" width="100">`);
+
+    // Zona de avistamento
+    L.circle([r.lat,r.lng], {
+        color: 'orange',
+        fillColor: '#FFA50033',
+        fillOpacity: 0.3,
+        radius: 20
+    }).addTo(markers);
 }
 
+// ------------------ Histórico ------------------
 function renderHistory(filter=''){
-    historyList.innerHTML = '';
+    historyList.innerHTML='';
     data.filter(r=>r.tipo.toLowerCase().includes(filter.toLowerCase()) || r.status.toLowerCase().includes(filter.toLowerCase()))
         .forEach((r,i)=>{
-            let li = document.createElement('li');
-            li.innerHTML = `<img src="${r.foto}">
-            <div>
-                <b>${r.tipo}</b><br>${r.status}<br>${r.endereco}<br>${new Date(r.timestamp).toLocaleString()}<br>
-                <a href="#" data-i="${i}">Ver no mapa</a>
-            </div>`;
+            let li=document.createElement('li'); li.classList.add('history-item');
+            li.innerHTML=`<img src="${r.foto}"><div><b>${r.tipo}</b><br>${r.status}<br>${r.endereco}<br>${new Date(r.timestamp).toLocaleString()}<br><a href="#" data-i="${i}">Ver no mapa</a></div>`;
             li.querySelector('a').addEventListener('click', e=>{
                 e.preventDefault();
                 map.setView([r.lat,r.lng],17);
-                sidebar.classList.add('hidden');
+                sidebar.classList.remove('show');
             });
             historyList.appendChild(li);
         });
 }
 
 // ------------------ Gamificação ------------------
-function updateScoreAndBadges(){
-    let badges = '';
-    if(score >= 20) badges='🥇';
-    else if(score >=10) badges='🥈';
-    else if(score >=5) badges='🥉';
-    scoreEl.textContent=`🏆 ${score} pts ${badges}`;
-}
+function updateScoreAndBadges(){ let badges=''; if(score>=20) badges='🥇'; else if(score>=10) badges='🥈'; else if(score>=5) badges='🥉'; scoreEl.textContent=`🏆 ${score} pts ${badges}`; }
 
 // ------------------ Heatmap ------------------
 function toggleHeatmap(){
-    if(heatLayer){
-        map.removeLayer(heatLayer);
-        heatLayer = null;
-        showToast('Heatmap desligado');
-        return;
-    }
-    let points = data.map(r=>[r.lat,r.lng,0.6]);
-    heatLayer = L.heatLayer(points, { radius:25, blur:20 }).addTo(map);
+    if(heatLayer){ map.removeLayer(heatLayer); heatLayer=null; showToast('Heatmap desligado'); return; }
+    let points=data.map(r=>[r.lat,r.lng,0.6]);
+    heatLayer = L.heatLayer(points,{radius:25,blur:20}).addTo(map);
     showToast('Heatmap ligado');
 }
 
@@ -110,7 +109,7 @@ function toggleHeatmap(){
 function exportJSON(){
     const blob = new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href=url; a.download='petgo_data.json'; a.click();
+    const a=document.createElement('a'); a.href=url; a.download='petgo_data.json'; a.click();
     URL.revokeObjectURL(url);
     showToast('JSON exportado');
 }
@@ -118,93 +117,102 @@ function exportJSON(){
 // ------------------ Tema escuro ------------------
 function toggleTheme(){
     document.body.classList.toggle('dark-theme');
-    if(document.body.classList.contains('dark-theme')) themeToggle.textContent='☀️';
-    else themeToggle.textContent='🌙';
+    themeToggle.textContent=document.body.classList.contains('dark-theme')?'☀️':'🌙';
 }
 
-// ------------------ Compressão de Imagem ------------------
-function compressImage(dataURL, maxWidth=200, maxHeight=200) {
+// ------------------ Compressão de imagem ------------------
+function compressImage(dataURL,maxWidth=200,maxHeight=200){
     return new Promise(resolve=>{
-        const img = new Image();
-        img.onload = () => {
-            let w = img.width;
-            let h = img.height;
-            if(w>maxWidth){ h = h * (maxWidth / w); w = maxWidth; }
-            if(h>maxHeight){ w = w * (maxHeight / h); h = maxHeight; }
-            const canvas = document.createElement('canvas');
-            canvas.width = w; canvas.height = h;
-            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-            resolve(canvas.toDataURL('image/jpeg', 0.5));
+        const img=new Image();
+        img.onload=()=>{
+            let w=img.width, h=img.height;
+            if(w>maxWidth){ h*=maxWidth/w; w=maxWidth; }
+            if(h>maxHeight){ w*=maxHeight/h; h=maxHeight; }
+            const canvas=document.createElement('canvas');
+            canvas.width=w; canvas.height=h;
+            canvas.getContext('2d').drawImage(img,0,0,w,h);
+            resolve(canvas.toDataURL('image/jpeg',0.5));
         };
-        img.src = dataURL;
+        img.src=dataURL;
     });
 }
 
-// ------------------ Reverse Geocoding ------------------
-async function getAddress(lat, lng){
-    try {
+// ------------------ Reverse geocoding ------------------
+async function getAddress(lat,lng){
+    try{
         const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`);
         const data = await res.json();
         return data.display_name || "Endereço não encontrado";
-    } catch(e){
-        console.error(e);
-        return "Endereço não encontrado";
-    }
+    }catch(e){ console.error(e); return "Endereço não encontrado"; }
 }
 
 // ------------------ EmailJS ------------------
-emailjs.init("Hx4D4KkKfCSUb_xQR"); // substitua pela sua Public Key
-
+emailjs.init("Hx4D4KkKfCSUb_xQR"); // sua Public Key
 function sendEmail(rec){
-    compressImage(rec.foto).then(compressed => {
+    compressImage(rec.foto).then(compressed=>{
         emailjs.send("service_thylr79","template_07vxayl",{
-            tipo: rec.tipo,
-            status: rec.status,
-            lat: rec.lat,
-            lng: rec.lng,
-            endereco: rec.endereco,
-            map_link: rec.map_link,
-            timestamp: rec.timestamp,
-            foto: compressed,
-            para: "ruberttramires4@gmail.com"
-        }).then(()=>{
-            console.log('Email enviado com foto comprimida');
-        }).catch(e=>{
-            console.error('Erro no envio de email:', e);
-        });
+            tipo: rec.tipo, status: rec.status, lat: rec.lat, lng: rec.lng,
+            endereco: rec.endereco, map_link: rec.map_link, timestamp: rec.timestamp,
+            foto: compressed, para: "ruberttramires4@gmail.com"
+        }).then(()=>console.log('Email enviado')).catch(e=>console.error(e));
     });
 }
 
-// ------------------ Notificação visual ONG ------------------
+// ------------------ Toast ONG ------------------
 function showONGNotification(rec){
-    const ongDiv = document.createElement('div');
+    const ongDiv=document.createElement('div');
     ongDiv.className='toast';
-    ongDiv.textContent = `ONG ALERT: ${rec.tipo} (${rec.status}) avistado!`;
+    ongDiv.textContent=`ONG ALERT: ${rec.tipo} (${rec.status}) avistado!`;
     document.body.appendChild(ongDiv);
     ongDiv.classList.add('show');
     setTimeout(()=>ongDiv.remove(),3000);
 }
 
-// ------------------ EVENTOS ------------------
+// ------------------ Eventos ------------------
 
-// Modal
-btnReport.addEventListener('click', ()=>{ modal.classList.remove('hidden'); startCamera(); });
-btnClose.addEventListener('click', ()=>{ modal.classList.add('hidden'); if(stream) stream.getTracks().forEach(t=>t.stop()); });
-btnSnap.addEventListener('click', ()=>{
-    if(!video.videoWidth){ showToast('Câmera não pronta'); return; }
-    const c=document.createElement('canvas'); c.width=video.videoWidth; c.height=video.videoHeight;
-    c.getContext('2d').drawImage(video,0,0,c.width,c.height);
-    photo = c.toDataURL('image/png'); imgPreview.src=photo; imgPreview.style.display=''; video.style.display='none';
+// Modal captura
+btnReport.addEventListener('click', ()=>{
+    modal.classList.add('show');
+    video.style.display=''; imgPreview.style.display='none'; photo=null;
+    startCamera();
 });
-btnToggleCam.addEventListener('click', ()=>{ facing = facing==='environment'?'user':'environment'; startCamera(); });
+btnClose.addEventListener('click', ()=>{
+    modal.classList.remove('show');
+    if(stream) stream.getTracks().forEach(t=>t.stop());
+    photo=null; imgPreview.src=''; video.style.display='';
+});
+btnSnap.addEventListener('click', async ()=>{
+    if(!video.videoWidth){ showToast('Câmera não pronta'); return; }
+    const canvas=document.createElement('canvas');
+    canvas.width=video.videoWidth; canvas.height=video.videoHeight;
+    canvas.getContext('2d').drawImage(video,0,0,canvas.width,canvas.height);
+    photo=canvas.toDataURL('image/png');
+    imgPreview.src=photo; imgPreview.style.display=''; video.style.display='none';
+
+    // Verificação de animal
+    const animalDetected = await detectAnimal(canvas);
+    if(!animalDetected){
+        showToast('Nenhum animal identificado na foto');
+        photo=null;
+        imgPreview.style.display='none';
+        video.style.display='';
+        startCamera();
+    } else {
+        showToast('Animal detectado ✅');
+    }
+});
+btnToggleCam.addEventListener('click', ()=>{
+    facing = (facing==='environment')?'user':'environment';
+    startCamera();
+});
 
 // Enviar registro
 btnSend.addEventListener('click', ()=>{
-    if(!photo){ showToast('Tire uma foto primeiro'); return; }
+    if(!photo){ showToast('Tire uma foto de animal primeiro'); return; }
     if(!navigator.geolocation){ showToast('Geolocalização indisponível'); return; }
-    
+
     navigator.geolocation.getCurrentPosition(async pos=>{
-        const rec = {
+        const rec={
             foto: photo,
             tipo: tipoSel.value,
             status: statusSel.value,
@@ -212,19 +220,15 @@ btnSend.addEventListener('click', ()=>{
             lng: pos.coords.longitude,
             timestamp: new Date().toISOString()
         };
-        
-        // Busca endereço legível
         rec.endereco = await getAddress(rec.lat, rec.lng);
         rec.map_link = `https://www.google.com/maps?q=${rec.lat},${rec.lng}`;
-        
         data.unshift(rec);
-        data = data.slice(0,50); // limita histórico para não estourar quota
+        data = data.slice(0,50);
         localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 
         addMarker(rec);
-        score+=10;
-        updateScoreAndBadges();
-        modal.classList.add('hidden');
+        score+=10; updateScoreAndBadges();
+        modal.classList.remove('show');
         if(stream) stream.getTracks().forEach(t=>t.stop());
         renderHistory();
         showToast('Animal registrado!');
@@ -234,4 +238,13 @@ btnSend.addEventListener('click', ()=>{
 });
 
 // Histórico
-btnHistory.addEventListener('click', ()=>{ sidebar.classList.toggle('hidden'); renderHistory(); });
+btnHistory.addEventListener('click', ()=>{ sidebar.classList.toggle('show'); renderHistory(); });
+btnCloseHistory.addEventListener('click', ()=> sidebar.classList.remove('show'));
+searchHistory.addEventListener('input', ()=> renderHistory(searchHistory.value));
+btnExport.addEventListener('click', exportJSON);
+btnHeat.addEventListener('click', toggleHeatmap);
+themeToggle.addEventListener('click', toggleTheme);
+
+// Inicial render
+data.forEach(addMarker);
+updateScoreAndBadges();
